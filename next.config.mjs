@@ -3,7 +3,7 @@ export default {
 	// Fully static HTML — no Node server at runtime, so this deploys to GitHub Pages.
 	// It also rules out ISR, route handlers and server actions; see the README.
 	output: "export",
-	// Served from demo.draftbase.co, so no basePath.
+	// Served from demo-ecommerce.draftbase.co, so no basePath.
 	trailingSlash: true,
 	// next/image needs a server to optimise; static export has none.
 	images: { unoptimized: true },
