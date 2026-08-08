@@ -236,6 +236,8 @@ than steel, tougher than bare aluminium, and not precious about the heat source.
 
 async function main() {
 	for (const template of templates) await ensureTemplate(template);
+	// The CLI (`npm create draftbase`) seeds schema only, so a new project starts empty.
+	if (process.env.SEED_TEMPLATES_ONLY) return;
 
 	const collectionIds = {};
 	for (const { image, ...collection } of collections) {
