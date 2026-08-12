@@ -21,16 +21,26 @@ if (!API_KEY) {
 }
 
 async function api(path, { method = "GET", body } = {}) {
-	const res = await fetch(new URL(path, BASE_URL), {
-		method,
-		headers: {
-			Authorization: `Bearer ${API_KEY}`,
-			...(body ? { "Content-Type": "application/json" } : {}),
-		},
-		body: body ? JSON.stringify(body) : undefined,
-	});
-	if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${await res.text()}`);
-	return res.status === 204 ? null : res.json();
+	// A full seed is a burst of writes, so the API's rate limiter is expected rather than
+	// exceptional — back off and retry instead of leaving the org half-seeded.
+	for (let attempt = 0; ; attempt++) {
+		const res = await fetch(new URL(path, BASE_URL), {
+			method,
+			headers: {
+				Authorization: `Bearer ${API_KEY}`,
+				...(body ? { "Content-Type": "application/json" } : {}),
+			},
+			body: body ? JSON.stringify(body) : undefined,
+		});
+		if (res.status === 429 && attempt < 5) {
+			const seconds = Number(res.headers.get("retry-after")) || 2 ** attempt;
+			console.log(`rate limited, retrying in ${seconds}s`);
+			await new Promise((resolve) => setTimeout(resolve, seconds * 1000));
+			continue;
+		}
+		if (!res.ok) throw new Error(`${method} ${path} -> ${res.status} ${await res.text()}`);
+		return res.status === 204 ? null : res.json();
+	}
 }
 
 /** A template's key is derived from its name ("Blog Post" -> "blogPost"), and is what
@@ -76,6 +86,14 @@ async function ensureEntry(templateId, titleField, fields, tags = []) {
 	const list = await api(`/entries?envId=${ENV_ID}&templateId=${templateId}&limit=100`);
 	const match = list.items.find((e) => e.fields[titleField] === fields[titleField]);
 	if (match) {
+		// Re-publish rather than skip: a previous run interrupted between create and publish
+		// leaves a draft the site cannot see.
+		if (match.status !== "published") {
+			await api(`/entries/${match._id}/status`, {
+				method: "PATCH",
+				body: { status: "published" },
+			});
+		}
 		console.log(`entry "${fields[titleField]}" already exists`);
 		return match._id;
 	}
@@ -141,6 +159,41 @@ const templates = [
 			},
 		],
 	},
+	{
+		// Rendered on the home page and emitted as FAQPage JSON-LD, so the answers an
+		// assistant quotes are edited in the CMS rather than hardcoded in the template.
+		key: "faq",
+		name: "Faq",
+		titleField: "question",
+		fields: [
+			{ key: "question", label: "Question", type: "text", required: true },
+			{ key: "answer", label: "Answer", type: "text", multiline: true, required: true },
+			{ key: "order", label: "Order", type: "number" },
+		],
+	},
+];
+
+const faqs = [
+	{
+		question: "What's your return policy?",
+		answer: "Unused items can be returned within 30 days of delivery for a full refund.",
+		order: 1,
+	},
+	{
+		question: "How long does shipping take?",
+		answer: "Orders ship within 2 business days and arrive in 3-5 days domestically. Shipping is free over $50.",
+		order: 2,
+	},
+	{
+		question: "Do you ship internationally?",
+		answer: "Yes, we ship to most countries. Rates are calculated at checkout.",
+		order: 3,
+	},
+	{
+		question: "How do I track my order?",
+		answer: "You'll receive a tracking link by email as soon as your order ships.",
+		order: 4,
+	},
 ];
 
 const collections = [
@@ -166,7 +219,10 @@ const products = [
 		price: 89,
 		collection: "everyday-carry",
 		summary: "A four-piece knife with a steel frame lock and no branding on the blade.",
-		images: ["https://picsum.photos/seed/knife1/900/900", "https://picsum.photos/seed/knife2/900/900"],
+		images: [
+			"https://picsum.photos/seed/knife1/900/900",
+			"https://picsum.photos/seed/knife2/900/900",
+		],
 		options: [{ name: "Finish", values: ["Raw", "Stonewashed", "Black"] }],
 		description: `Four parts, two screws, one blade. There is nothing in here that exists
 to be mentioned on a spec sheet.
@@ -186,7 +242,8 @@ Wipe it dry. That is the entire maintenance schedule.`,
 		slug: "waxed-canvas-tote",
 		price: 128,
 		collection: "everyday-carry",
-		summary: "18 oz waxed canvas, leather handles, and a flat bottom that stands up on its own.",
+		summary:
+			"18 oz waxed canvas, leather handles, and a flat bottom that stands up on its own.",
 		images: ["https://picsum.photos/seed/tote/900/900"],
 		options: [{ name: "Colour", values: ["Field Tan", "Slate", "Olive"] }],
 		description: `The wax finish keeps rain out and picks up creases where you use it, which
@@ -267,6 +324,8 @@ async function main() {
 			collection: collectionIds[collection],
 		});
 	}
+
+	for (const faq of faqs) await ensureEntry("faq", "question", faq);
 
 	console.log(
 		"\nSeed complete. Add a Stripe Payment Link to each product in Draftbase to enable checkout, then run `npm run dev`.",

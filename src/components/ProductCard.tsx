@@ -10,11 +10,13 @@ export function ProductCard({ product }: { product: DbEntry<Product> }) {
 			<Link href={`/products/${slug}`}>
 				{/* Plain <img>: `output: "export"` has no server to run next/image's optimiser. */}
 				{cover?.url && <img src={cover.url} alt={cover.altText ?? title} loading="lazy" />}
-				<h3>{title}</h3>
-				<p className="muted price" style={{ margin: 0 }}>
-					{formatPrice(price, currency)}
-					{inStock === false && " · Sold out"}
-				</p>
+				<div className="body">
+					<h3>{title}</h3>
+					<p className="price">
+						{formatPrice(price, currency)}
+						{inStock === false && " · Sold out"}
+					</p>
+				</div>
 			</Link>
 		</li>
 	);

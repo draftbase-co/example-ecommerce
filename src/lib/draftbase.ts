@@ -39,6 +39,12 @@ export async function getAll<Fields>(templateId: string, include = 1): Promise<D
 export const getProducts = () => getAll<Product>("product");
 export const getCollections = () => getAll<Collection>("collection");
 
+/** Home-page FAQ, sorted by the entry's `order` field. Also feeds FAQPage JSON-LD. */
+export async function getFaqs(): Promise<DbEntry<Faq>[]> {
+	const faqs = await getAll<Faq>("faq");
+	return faqs.sort((a, b) => (a.fields.order ?? 0) - (b.fields.order ?? 0));
+}
+
 export function formatPrice(amount: number, currency = "USD"): string {
 	return new Intl.NumberFormat("en-US", { style: "currency", currency }).format(amount);
 }
@@ -46,6 +52,12 @@ export function formatPrice(amount: number, currency = "USD"): string {
 export interface Media {
 	url?: string | null;
 	altText?: string;
+}
+
+export interface Faq {
+	question: string;
+	answer: string;
+	order?: number;
 }
 
 export interface Collection {
