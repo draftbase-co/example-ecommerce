@@ -20,7 +20,7 @@ export const metadata: Metadata = {
 
 const storeSchema = {
 	"@context": "https://schema.org",
-	"@type": "Store",
+	"@type": "Organization",
 	name: SITE_NAME,
 	description: SITE_DESCRIPTION,
 	url: SITE_URL,

@@ -15,19 +15,22 @@ export default async function HomePage() {
 		"@context": "https://schema.org",
 		"@type": "ItemList",
 		itemListElement: products.map((product, index) => ({
-			"@type": "Product",
+			"@type": "ListItem",
 			position: index + 1,
-			name: product.fields.title,
-			url: `${SITE_URL}/products/${product.fields.slug}/`,
-			image: product.fields.images?.[0]?.url ?? undefined,
-			offers: {
-				"@type": "Offer",
-				priceCurrency: product.fields.currency ?? "USD",
-				price: product.fields.price.toFixed(2),
-				availability:
-					product.fields.inStock === false
-						? "https://schema.org/OutOfStock"
-						: "https://schema.org/InStock",
+			item: {
+				"@type": "Product",
+				name: product.fields.title,
+				url: `${SITE_URL}/products/${product.fields.slug}/`,
+				image: product.fields.images?.[0]?.url ?? undefined,
+				offers: {
+					"@type": "Offer",
+					priceCurrency: product.fields.currency ?? "USD",
+					price: product.fields.price.toFixed(2),
+					availability:
+						product.fields.inStock === false
+							? "https://schema.org/OutOfStock"
+							: "https://schema.org/InStock",
+				},
 			},
 		})),
 	};
