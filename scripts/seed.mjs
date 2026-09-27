@@ -10,6 +10,7 @@
  * Safe to re-run: existing templates are left alone and entries are matched by title.
  * Products are seeded without a Stripe Payment Link — add your own in the Draftbase UI.
  */
+import { readFileSync } from "node:fs";
 const BASE_URL = process.env.DRAFTBASE_API_URL || "https://api.draftbase.co";
 const API_KEY = process.env.DRAFTBASE_MANAGEMENT_API_KEY;
 const ENV_ID = process.env.DRAFTBASE_ENVIRONMENT || "production";
@@ -106,72 +107,11 @@ async function ensureEntry(templateId, titleField, fields, tags = []) {
 	return id;
 }
 
-const templates = [
-	{
-		key: "collection",
-		name: "Collection",
-		titleField: "title",
-		fields: [
-			{ key: "title", label: "Title", type: "text", required: true },
-			{ key: "slug", label: "Slug", type: "text", required: true, isSlug: true },
-			{ key: "description", label: "Description", type: "richText" },
-			{ key: "image", label: "Image", type: "media" },
-		],
-	},
-	{
-		key: "product",
-		name: "Product",
-		titleField: "title",
-		fields: [
-			{ key: "title", label: "Title", type: "text", required: true },
-			{ key: "slug", label: "Slug", type: "text", required: true, isSlug: true },
-			{ key: "price", label: "Price", type: "number", required: true, min: 0 },
-			{
-				key: "currency",
-				label: "Currency",
-				type: "text",
-				defaultValue: "USD",
-				options: ["USD", "EUR", "GBP", "CAD"],
-			},
-			{ key: "summary", label: "Summary", type: "text", multiline: true, maxLength: 200 },
-			{ key: "description", label: "Description", type: "richText" },
-			// `list: true` stores several assets; include resolves them to an array.
-			{ key: "images", label: "Images", type: "media", list: true },
-			{
-				key: "collection",
-				label: "Collection",
-				type: "reference",
-				referenceTemplateId: "collection",
-			},
-			{
-				key: "stripePaymentLink",
-				label: "Stripe Payment Link",
-				type: "text",
-				helpText:
-					"A https://buy.stripe.com/... URL. Public by design — it is a hosted checkout page, not a key.",
-			},
-			{ key: "inStock", label: "In stock", type: "boolean", defaultValue: true },
-			{
-				key: "options",
-				label: "Options",
-				type: "json",
-				helpText: '[{ "name": "Size", "values": ["S", "M", "L"] }]',
-			},
-		],
-	},
-	{
-		// Rendered on the home page and emitted as FAQPage JSON-LD, so the answers an
-		// assistant quotes are edited in the CMS rather than hardcoded in the template.
-		key: "faq",
-		name: "Faq",
-		titleField: "question",
-		fields: [
-			{ key: "question", label: "Question", type: "text", required: true },
-			{ key: "answer", label: "Answer", type: "text", multiline: true, required: true },
-			{ key: "order", label: "Order", type: "number" },
-		],
-	},
-];
+// Shared with the Draftbase web panel, which creates these same templates when it deploys
+// this example to GitHub Pages — edit the JSON, not a copy here.
+const templates = JSON.parse(
+	readFileSync(new URL("../draftbase.templates.json", import.meta.url), "utf8"),
+);
 
 const faqs = [
 	{
